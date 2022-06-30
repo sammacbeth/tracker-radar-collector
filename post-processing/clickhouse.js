@@ -20,6 +20,7 @@ Examples:
     .option('--name <crawlname>', 'Name of the crawl')
     .option('--region <region>', 'Crawl region code')
     .option('-d --crawldir <dir>', 'Directory of crawl output to import')
+    .option('--delete', 'Delete data for the given crawlid')
     .parse(process.argv);
 
 const ch = new Clickhouse();
@@ -28,7 +29,7 @@ const crawlRegion = program.region;
 const crawledPagePath = program.crawldir;
 
 // Must provide at least one option
-if (!crawlName && !crawlRegion && !crawledPagePath && !program.crawlId) {
+if (!crawlName && !crawlRegion && !crawledPagePath && !program.crawlid) {
     program.outputHelp();
     process.exit(1);
 }
@@ -42,8 +43,13 @@ if (!crawlName && !crawlRegion && !crawledPagePath && !program.crawlId) {
         pages = (await fs.readdir(crawledPagePath)).filter(name => name.endsWith('.json') && name !== 'metadata.json');
     }
     ch.init({verbose: true, startTime: new Date(), urls: pages.length, logPath: ''});
-    if (program.crawlId) {
-        ch.crawlId = program.crawlId;
+    if (program.crawlid) {
+        ch.crawlId = program.crawlid;
+    }
+    // delete data for this crawlid
+    if (program.delete) {
+        await ch.delete();
+        return;
     }
     await ch.createCrawl(crawlName, crawlRegion);
     if (crawledPagePath) {

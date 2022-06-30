@@ -100,8 +100,12 @@ const TABLE_DEFINITIONS = [
  */
 function santizeCallArgs(args) {
     // in some cases call args have been stringified, so unwrap that first.
-    const argsArray = typeof args === 'string' ? JSON.parse(args) : (args || []);
-    return argsArray.map((/** @type {string} */ s) => s.replace(/'/g, ''));
+    try {
+        const argsArray = typeof args === 'string' ? JSON.parse(args) : (args || []);
+        return argsArray.map((/** @type {string} */ s) => s.replace(/'/g, ''));
+    } catch (e) {
+        return [];
+    }
 }
 
 class ClickhouseReporter extends BaseReporter {
@@ -219,6 +223,26 @@ class ClickhouseReporter extends BaseReporter {
     async cleanup() {
         await this.ready;
         await this.commitQueue();
+    }
+
+    async delete() {
+        const tables = [
+            'targets',
+            'cookies',
+            'apiCallStats',
+            'apiSavedCalls',
+            'cmps',
+            'elements',
+            'requests',
+            'pages',
+            'crawls'
+        ];
+        for (const table of tables) {
+            const query = `ALTER TABLE ${DB}.${table} DELETE WHERE crawlId = '${this.crawlId}'`;
+            console.log(query);
+            // eslint-disable-next-line no-await-in-loop
+            await this.client.query(query).toPromise();
+        }
     }
 }
 
